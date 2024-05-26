@@ -1,37 +1,25 @@
-const fs = require('fs');
+import fs from 'fs';
+import { promisify } from 'util';
+import csv from 'csv-parser';
 
-function readDatabase(filePath) {
-  return new Promise((res, rej) => {
-    if (fs.existsSync(filePath)) {
-      fs.readFile(filePath, (err, data) => {
-        if (err) rej(err);
-        else {
-          const studentsByMajor = {};
+const readFile = promisify(fs.readFile);
 
-          let students = data.toString().split('\n').map((elem) => elem.split(','));
-          students = students.slice(1);
+export async function readDatabase(filePath) {
+    try {
+        const data = await readFile(filePath, 'utf8');
+        const lines = data.trim().split('\n');
+        const students = {};
 
-          const fields = {};
-
-          students.forEach((student) => {
-            fields[student[student.length - 1]] = (fields[student[student.length - 1]] || 0) + 1;
-          });
-
-          for (const field in fields) {
-            if (field) {
-              const result = students
-                .filter((stud) => stud[stud.length - 1] === field)
-                .map((element) => element[0]);
-              studentsByMajor[field] = result;
+        lines.forEach(line => {
+            const [firstname, field] = line.split(',');
+            if (!students[field]) {
+                students[field] = [];
             }
-          }
-          res(studentsByMajor);
-        }
-      });
-    } else {
-      throw new Error('Cannot load the database');
-    }
-  });
-}
+            students[field].push(firstname);
+        });
 
-module.exports = readDatabase;
+        return students;
+    } catch (error) {
+        throw new Error('Cannot load the database');
+    }
+}
