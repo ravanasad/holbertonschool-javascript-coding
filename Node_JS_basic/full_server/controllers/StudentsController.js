@@ -1,89 +1,33 @@
-const readDatabase = require('../utils');
+import readDatabase from '../utils';
 
 class StudentsController {
-  static getAllStudents(req, res) {
+  static async getAllStudents(req, res) {
     try {
-      const students = readDatabase('database.csv');
-      students.then((data) => {
-        const fields = {};
-        const printed = [];
-        printed.push('This is the list of our students');
-        printed.push(`Number of students: ${data.length - 1}`);
-        data.forEach((student) => {
-          const [firstname, , , field] = student;
-          if (!fields[field]) {
-            fields[field] = {
-              count: 0,
-              list: [],
-            };
-          }
-          fields[field].count += 1;
-          fields[field].list.push(firstname);
-        });
-        const f = [];
-        for (const field in fields) {
-          if (Object.prototype.hasOwnProperty.call(fields, field)) {
-            f.push(field);
-          }
-        }
-        f.shift();
-        for (const field in f) {
-          if (Object.prototype.hasOwnProperty.call(f, field)) {
-            printed.push(`Number of students in ${f[field]}: ${fields[f[field]].list.length}. List: ${fields[f[field]].list.join(', ')}`);
-          }
-        }
-        return res.send(printed.join('\n'));
-      });
+      const database = await readDatabase('./database.csv');
+      const responseData = `This is the list of our students\nNumber of students in CS: ${database.inFields.CS.counter}. List: ${database.inFields.CS.students}\nNumber of students in SWE: ${database.inFields.SWE.counter}. List: ${database.inFields.SWE.students}`;
+      res.status(200).send(responseData);
     } catch (error) {
-      return res.status(500).send(error.message);
+      res.status(500).send('Cannot load the database');
     }
-    return (0);
   }
 
-  static getAllStudentsByMajor(req, res) {
-    try {
-      const students = readDatabase('database.csv');
-      students.then((data) => {
-        const { major } = req.params;
-        const fields = {};
-        const printed = [];
-        data.forEach((student) => {
-          const [firstname, , , field] = student;
-          if (!fields[field]) {
-            fields[field] = {
-              count: 0,
-              list: [],
-            };
-          }
-          fields[field].count += 1;
-          fields[field].list.push(firstname);
-        });
-        const f = [];
-        for (const field in fields) {
-          if (Object.prototype.hasOwnProperty.call(fields, field)) {
-            f.push(field);
-          }
-        }
-        f.shift();
-        switch (major) {
-          case 'CS':
-            printed.push(`List: ${fields.CS.list.join(', ')}`);
-            res.send(printed.join('\n'));
-            break;
-          case 'SWE':
-            printed.push(`List: ${fields.SWE.list.join(', ')}`);
-            res.send(printed.join('\n'));
-            break;
-          default:
-            return res.status(500).send('Major parameter must be CS or SWE');
-        }
-        return (0);
-      });
-    } catch (error) {
-      return res.status(500).send(error.message);
+  static async getAllStudentsByMajor(req, res) {
+    const { major } = req.params;
+
+    if (major !== 'CS' && major !== 'SWE') {
+      return res.status(500).send('Major parameter must be CS or SWE');
     }
-    return (0);
+
+    try {
+      const database = await readDatabase('./database.csv');
+      const responseData = `List: ${database.inFields[major].students}`;
+      res.status(200).send(responseData);
+    } catch (error) {
+      res.status(500).send('Cannot load the database');
+    }
+
+    return undefined;
   }
 }
 
-module.exports = StudentsController;
+export default StudentsController;
