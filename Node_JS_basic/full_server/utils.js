@@ -1,33 +1,36 @@
 const fs = require('fs');
 
-function readDatabase(path) {
-  return new Promise((resolve, reject) => {
-    fs.readFile(path, 'utf-8', (err, dataDb) => {
-      if (err) {
-        reject(new Error('Cannot load the database'));
-      }
-      if (dataDb) {
-        const inFields = {};
-        const data = dataDb.split('\n');
-        console.log(`Number of students: ${data.length - 1}`);
+function readDatabase(filePath) {
+  return new Promise((res, rej) => {
+    if (fs.existsSync(filePath)) {
+      fs.readFile(filePath, (err, data) => {
+        if (err) rej(err);
+        else {
+          const studentsByMajor = {};
 
-        for (let i = 1; i < data.length; i += 1) {
-          const line = data[i].split(',');
-          if (inFields[line[3]]) {
-            inFields[line[3]].counter += 1;
-            inFields[line[3]].students.push(` ${line[0]}`);
-          } else {
-            inFields[line[3]] = { counter: 1, students: [`${line[0]}`] };
+          let students = data.toString().split('\n').map((elem) => elem.split(','));
+          students = students.slice(1);
+
+          const fields = {};
+
+          students.forEach((student) => {
+            fields[student[student.length - 1]] = (fields[student[student.length - 1]] || 0) + 1;
+          });
+
+          for (const field in fields) {
+            if (field) {
+              const result = students
+                .filter((stud) => stud[stud.length - 1] === field)
+                .map((element) => element[0]);
+              studentsByMajor[field] = result;
+            }
           }
+          res(studentsByMajor);
         }
-        for (const key in inFields) {
-          if (Object.prototype.hasOwnProperty.call(inFields, key)) {
-            console.log(`Number of students in ${key}: ${inFields[key].counter}. List: ${inFields[key].students}`);
-          }
-        }
-        resolve({ inFields, counter: data.length - 1 });
-      }
-    });
+      });
+    } else {
+      throw new Error('Cannot load the database');
+    }
   });
 }
 

@@ -1,33 +1,56 @@
 import readDatabase from '../utils';
 
+const fs = require('fs');
+
+const dbPath = process.argv[2];
+
 class StudentsController {
-  static async getAllStudents(req, res) {
-    try {
-      const database = await readDatabase('./database.csv');
-      const responseData = `This is the list of our students\nNumber of students in CS: ${database.inFields.CS.counter}. List: ${database.inFields.CS.students}\nNumber of students in SWE: ${database.inFields.SWE.counter}. List: ${database.inFields.SWE.students}`;
-      res.status(200).send(responseData);
-    } catch (error) {
-      res.status(500).send('Cannot load the database');
+  static getAllStudents(req, res) {
+    if (fs.existsSync(dbPath)) {
+      readDatabase(dbPath)
+        .then((data) => {
+          const info = [];
+
+          info.push('This is the list of our students');
+
+          for (const field in data) {
+            if (field) {
+              info.push(`Number os students in ${field}: ${data[field].length}.  List: ${data[field].join(', ')}`);
+            }
+          }
+          res.setHeader('Content-Type', 'text/plain');
+          res.status(200).send(`${info.join('\n')}`);
+        })
+        .catch((err) => {
+          res.setHeader('Content-Type', 'text/plain');
+          res.status(500).send(err.message);
+        });
+    } else {
+      res.setHeader('Content-Type', 'text/plain');
+      res.status(200).send('Cannot load the database');
     }
   }
 
-  static async getAllStudentsByMajor(req, res) {
-    const { major } = req.params;
-
-    if (major !== 'CS' && major !== 'SWE') {
-      return res.status(500).send('Major parameter must be CS or SWE');
+  static getAllStudentsByMajor(req, res) {
+    const majors = ['CS', 'SWE'];
+    if (majors.includes(req.params.major)) {
+      if (fs.existsSync(dbPath)) {
+        readDatabase(dbPath)
+          .then((data) => {
+            const students = data[req.params.major].join(', ');
+            res.setHeader('Content-Type', 'text/plain');
+            res.status(200).send(`List: ${students}`);
+          });
+      } else {
+        res.setHeader('Content-Type', 'text/plain');
+        res.status(500).send('Cannot load the database');
+      }
+    } else {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'text/plain');
+      res.send('Major parameter must be CS or SWE');
     }
-
-    try {
-      const database = await readDatabase('./database.csv');
-      const responseData = `List: ${database.inFields[major].students}`;
-      res.status(200).send(responseData);
-    } catch (error) {
-      res.status(500).send('Cannot load the database');
-    }
-
-    return undefined;
   }
 }
 
-export default StudentsController;
+module.exports = StudentsController;
