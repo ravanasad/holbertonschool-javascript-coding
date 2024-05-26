@@ -1,25 +1,21 @@
-import fs from 'fs';
-import { promisify } from 'util';
-import csv from 'csv-parser';
+const fs = require('fs');
 
-const readFile = promisify(fs.readFile);
+const aggregate = (data) => data.slice(1).reduce(
+  (a, b) => {
+    const [first, , , field] = b.split(',');
+    if (field === 'CS') {
+      a.cs.push(first);
+    } else if (field === 'SWE') a.swe.push(first);
+    return a;
+  },
+  { cs: [], swe: [] },
+);
 
-export async function readDatabase(filePath) {
-    try {
-        const data = await readFile(filePath, 'utf8');
-        const lines = data.trim().split('\n');
-        const students = {};
+const readDatabase = (path) => new Promise((resolve, reject) => {
+  fs.readFile(path, 'utf-8', (err, res) => {
+    if (err) return reject(new Error('Cannot load the database'));
+    return resolve(aggregate(res.split('\n')));
+  });
+});
 
-        lines.forEach(line => {
-            const [firstname, field] = line.split(',');
-            if (!students[field]) {
-                students[field] = [];
-            }
-            students[field].push(firstname);
-        });
-
-        return students;
-    } catch (error) {
-        throw new Error('Cannot load the database');
-    }
-}
+module.exports = readDatabase;
